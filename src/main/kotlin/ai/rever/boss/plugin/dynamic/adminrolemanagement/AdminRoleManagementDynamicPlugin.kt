@@ -1,7 +1,11 @@
 package ai.rever.boss.plugin.dynamic.adminrolemanagement
 
+import ai.rever.boss.plugin.api.AuthDataProvider
 import ai.rever.boss.plugin.api.DynamicPlugin
 import ai.rever.boss.plugin.api.PluginContext
+import ai.rever.boss.plugin.api.UserManagementProvider
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 
 /**
  * Admin Role Management dynamic plugin - Loaded from external JAR.
@@ -17,14 +21,28 @@ class AdminRoleManagementDynamicPlugin : DynamicPlugin {
     override val author: String = "Risa Labs"
     override val url: String = "https://github.com/risa-labs-inc/boss-plugin-admin-role-management"
 
-    private var userManagementProvider: ai.rever.boss.plugin.api.UserManagementProvider? = null
-    private var authDataProvider: ai.rever.boss.plugin.api.AuthDataProvider? = null
-    private var pluginScope: kotlinx.coroutines.CoroutineScope? = null
-
     override fun register(context: PluginContext) {
-        userManagementProvider = context.userManagementProvider
-        authDataProvider = context.authDataProvider
-        pluginScope = context.pluginScope
+        // Try to get providers via reflection for backwards compatibility with 1.0.3
+        val userManagementProvider = try {
+            val method = context.javaClass.getMethod("getUserManagementProvider")
+            method.invoke(context) as? UserManagementProvider
+        } catch (_: Exception) {
+            null
+        }
+
+        val authDataProvider = try {
+            val method = context.javaClass.getMethod("getAuthDataProvider")
+            method.invoke(context) as? AuthDataProvider
+        } catch (_: Exception) {
+            null
+        }
+
+        val pluginScope = try {
+            val method = context.javaClass.getMethod("getPluginScope")
+            method.invoke(context) as? CoroutineScope
+        } catch (_: Exception) {
+            null
+        }
 
         context.panelRegistry.registerPanel(AdminRoleManagementInfo) { ctx, panelInfo ->
             AdminRoleManagementComponent(
@@ -32,7 +50,7 @@ class AdminRoleManagementDynamicPlugin : DynamicPlugin {
                 panelInfo = panelInfo,
                 userManagementProvider = userManagementProvider,
                 authDataProvider = authDataProvider,
-                scope = pluginScope ?: kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main)
+                scope = pluginScope ?: CoroutineScope(Dispatchers.Main)
             )
         }
     }
