@@ -1,35 +1,472 @@
 package ai.rever.boss.plugin.dynamic.adminrolemanagement
 
-import ai.rever.boss.plugin.ui.BossTheme
+import ai.rever.boss.plugin.api.UserWithRolesData
+import ai.rever.boss.plugin.scrollbar.getPanelScrollbarConfig
+import ai.rever.boss.plugin.scrollbar.lazyListScrollbar
+import ai.rever.boss.plugin.ui.BossSearchBar
+import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Security
-import androidx.compose.runtime.Composable
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Security
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 @Composable
-fun AdminRoleManagementContent() {
-    BossTheme {
-        Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colors.background) {
-            Column(modifier = Modifier.fillMaxSize().padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-                Icon(imageVector = Icons.Outlined.Security, contentDescription = "Admin Role Management", modifier = Modifier.size(48.dp), tint = MaterialTheme.colors.primary)
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(text = "Admin Role Management", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colors.onBackground)
-                Spacer(modifier = Modifier.height(8.dp))
-                Card(modifier = Modifier.padding(16.dp), shape = RoundedCornerShape(8.dp), backgroundColor = MaterialTheme.colors.surface, elevation = 4.dp) {
-                    Column(modifier = Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(text = "Dynamic Plugin Stub", fontSize = 14.sp, fontWeight = FontWeight.Medium, color = MaterialTheme.colors.primary)
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(text = "Full functionality pending PluginContext expansion.", fontSize = 12.sp, color = MaterialTheme.colors.onSurface.copy(alpha = 0.7f))
+fun AdminRoleManagementContent(
+    viewModel: AdminRoleManagementViewModel,
+    currentUserId: String?
+) {
+    val state = viewModel.state
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0xFF2B2D30))
+            .padding(16.dp)
+    ) {
+        Column(modifier = Modifier.fillMaxSize()) {
+            // Header with refresh button
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    "User Role Management",
+                    color = Color.White,
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold
+                )
+
+                IconButton(
+                    onClick = { viewModel.loadAllUsers() },
+                    enabled = !state.isLoading
+                ) {
+                    Icon(
+                        Icons.Default.Refresh,
+                        contentDescription = "Refresh",
+                        tint = Color.White
+                    )
+                }
+            }
+
+            // Search bar
+            BossSearchBar(
+                query = state.searchQuery,
+                onQueryChange = { viewModel.searchUsers(it) },
+                placeholder = "Search users by email...",
+                modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)
+            )
+
+            // User count
+            Text(
+                "${state.filteredUsers.size} users",
+                color = Color.Gray,
+                fontSize = 12.sp,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+
+            // User list or loading/error states
+            when {
+                state.isLoading -> {
+                    LoadingView()
+                }
+                state.errorMessage != null -> {
+                    ErrorView(
+                        message = state.errorMessage,
+                        onRetry = { viewModel.loadAllUsers() }
+                    )
+                }
+                state.filteredUsers.isEmpty() -> {
+                    EmptyView(searchQuery = state.searchQuery)
+                }
+                else -> {
+                    UserList(
+                        users = state.filteredUsers,
+                        currentUserId = currentUserId,
+                        onAssignRole = { user -> viewModel.showAssignRoleDialog(user) },
+                        onRemoveRole = { user, role -> viewModel.showRemoveRoleDialog(user, role) },
+                        onDeleteUser = { user -> viewModel.showDeleteUserDialog(user) },
+                        onLoadMore = { viewModel.loadMoreUsers() },
+                        isLoadingMore = state.isLoadingMore,
+                        hasMore = state.hasMore,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+        }
+
+        // Dialogs
+        if (state.showAssignRoleDialog && state.selectedUser != null) {
+            AssignRoleDialog(
+                user = state.selectedUser,
+                availableRoles = viewModel.getAvailableRolesForUser(state.selectedUser),
+                selectedRole = state.selectedRoleToAssign,
+                onRoleSelected = { viewModel.setRoleToAssign(it) },
+                onConfirm = {
+                    state.selectedRoleToAssign?.let { role ->
+                        viewModel.assignRole(state.selectedUser.id, role)
+                    }
+                    viewModel.hideAssignRoleDialog()
+                },
+                onDismiss = { viewModel.hideAssignRoleDialog() },
+                isLoading = state.isOperationInProgress
+            )
+        }
+
+        if (state.showRemoveRoleDialog && state.selectedUser != null && state.selectedRoleToRemove != null) {
+            RemoveRoleConfirmationDialog(
+                user = state.selectedUser,
+                roleName = state.selectedRoleToRemove,
+                onConfirm = {
+                    viewModel.removeRole(state.selectedUser.id, state.selectedRoleToRemove)
+                    viewModel.hideRemoveRoleDialog()
+                },
+                onDismiss = { viewModel.hideRemoveRoleDialog() },
+                isLoading = state.isOperationInProgress
+            )
+        }
+
+        if (state.showDeleteUserDialog && state.selectedUser != null) {
+            DeleteUserConfirmationDialog(
+                user = state.selectedUser,
+                onConfirm = {
+                    viewModel.deleteUser(state.selectedUser.id)
+                    viewModel.hideDeleteUserDialog()
+                },
+                onDismiss = { viewModel.hideDeleteUserDialog() },
+                isLoading = state.isOperationInProgress
+            )
+        }
+
+        // Success snackbar
+        state.successMessage?.let { message ->
+            LaunchedEffect(message) {
+                kotlinx.coroutines.delay(3000)
+                viewModel.clearSuccessMessage()
+            }
+            Snackbar(
+                modifier = Modifier.align(Alignment.BottomCenter).padding(16.dp),
+                backgroundColor = Color(0xFF4CAF50)
+            ) {
+                Text(message, color = Color.White)
+            }
+        }
+    }
+}
+
+@Composable
+fun UserList(
+    users: List<UserWithRolesData>,
+    currentUserId: String?,
+    onAssignRole: (UserWithRolesData) -> Unit,
+    onRemoveRole: (UserWithRolesData, String) -> Unit,
+    onDeleteUser: (UserWithRolesData) -> Unit,
+    onLoadMore: () -> Unit,
+    isLoadingMore: Boolean,
+    hasMore: Boolean,
+    modifier: Modifier = Modifier
+) {
+    val listState = rememberLazyListState()
+    LazyColumn(
+        state = listState,
+        modifier = modifier
+            .lazyListScrollbar(
+                listState = listState,
+                direction = Orientation.Vertical,
+                config = getPanelScrollbarConfig()
+            )
+    ) {
+        items(users) { user ->
+            UserCard(
+                user = user,
+                currentUserId = currentUserId,
+                onAssignRole = { onAssignRole(user) },
+                onRemoveRole = { role -> onRemoveRole(user, role) },
+                onDeleteUser = { onDeleteUser(user) },
+                modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
+            )
+        }
+
+        if (hasMore) {
+            item {
+                LoadingMoreIndicator(
+                    isLoading = isLoadingMore,
+                    onLoadMore = onLoadMore
+                )
+            }
+        }
+
+        if (!hasMore && users.isNotEmpty()) {
+            item {
+                Box(
+                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        "No more users to load",
+                        color = Color.Gray,
+                        fontSize = 12.sp
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun LoadingMoreIndicator(
+    isLoading: Boolean,
+    onLoadMore: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        if (isLoading) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                CircularProgressIndicator(
+                    color = Color(0xFF4A90E2),
+                    modifier = Modifier.size(20.dp)
+                )
+                Text(
+                    "Loading more users...",
+                    color = Color.Gray,
+                    fontSize = 12.sp
+                )
+            }
+        } else {
+            LaunchedEffect(Unit) {
+                onLoadMore()
+            }
+            CircularProgressIndicator(
+                color = Color(0xFF4A90E2),
+                modifier = Modifier.size(20.dp)
+            )
+        }
+    }
+}
+
+@Composable
+fun UserCard(
+    user: UserWithRolesData,
+    currentUserId: String?,
+    onAssignRole: () -> Unit,
+    onRemoveRole: (String) -> Unit,
+    onDeleteUser: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val isAdmin = user.roles.contains("admin")
+
+    Card(
+        modifier = modifier,
+        backgroundColor = Color(0xFF3C3F41),
+        elevation = 2.dp,
+        shape = RoundedCornerShape(8.dp)
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Text(
+                user.email,
+                color = Color.White,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Medium
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                if (user.roles.isEmpty()) {
+                    Text(
+                        "No roles assigned",
+                        color = Color.Gray,
+                        fontSize = 12.sp,
+                        fontStyle = FontStyle.Italic
+                    )
+                } else {
+                    user.roles.forEach { roleName ->
+                        RoleBadge(
+                            roleName = roleName,
+                            userId = user.id,
+                            currentUserId = currentUserId,
+                            onRemove = { onRemoveRole(roleName) }
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(
+                    onClick = onAssignRole,
+                    colors = ButtonDefaults.buttonColors(
+                        backgroundColor = Color(0xFF4A90E2)
+                    ),
+                    modifier = Modifier.height(32.dp)
+                ) {
+                    Icon(
+                        Icons.Default.Add,
+                        contentDescription = "Assign Role",
+                        tint = Color.White,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Assign Role", color = Color.White, fontSize = 12.sp)
+                }
+
+                if (!isAdmin) {
+                    Button(
+                        onClick = onDeleteUser,
+                        colors = ButtonDefaults.buttonColors(
+                            backgroundColor = Color(0xFFE91E63)
+                        ),
+                        modifier = Modifier.height(32.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.Delete,
+                            contentDescription = "Delete User",
+                            tint = Color.White,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Delete", color = Color.White, fontSize = 12.sp)
                     }
                 }
             }
         }
+    }
+}
+
+@Composable
+fun RoleBadge(
+    roleName: String,
+    userId: String,
+    currentUserId: String?,
+    onRemove: () -> Unit
+) {
+    val isOwnAccount = currentUserId == userId
+    val badgeColor = Color(0xFF4A90E2)
+
+    val isRemovable = when {
+        roleName == "user" -> false
+        roleName == "admin" && isOwnAccount -> false
+        else -> true
+    }
+
+    Surface(
+        color = badgeColor.copy(alpha = 0.2f),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            if (roleName == "admin") {
+                Icon(
+                    Icons.Default.Security,
+                    contentDescription = "Admin",
+                    tint = badgeColor,
+                    modifier = Modifier.size(12.dp)
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+            }
+
+            Text(
+                roleName,
+                color = badgeColor,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Medium
+            )
+
+            if (isRemovable) {
+                Spacer(modifier = Modifier.width(4.dp))
+                IconButton(
+                    onClick = onRemove,
+                    modifier = Modifier.size(16.dp)
+                ) {
+                    Icon(
+                        Icons.Default.Close,
+                        contentDescription = "Remove $roleName role",
+                        tint = badgeColor,
+                        modifier = Modifier.size(12.dp)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun LoadingView() {
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        CircularProgressIndicator(color = Color(0xFF4A90E2))
+    }
+}
+
+@Composable
+fun ErrorView(message: String, onRetry: () -> Unit) {
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(
+                "Error",
+                color = Color(0xFFE91E63),
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                message,
+                color = Color.Gray,
+                fontSize = 12.sp
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            Button(onClick = onRetry) {
+                Text("Retry")
+            }
+        }
+    }
+}
+
+@Composable
+fun EmptyView(searchQuery: String) {
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            if (searchQuery.isBlank()) "No users found" else "No users match \"$searchQuery\"",
+            color = Color.Gray,
+            fontSize = 14.sp
+        )
     }
 }
