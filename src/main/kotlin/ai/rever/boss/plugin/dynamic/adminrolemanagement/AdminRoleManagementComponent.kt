@@ -20,20 +20,18 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.arkivanov.decompose.ComponentContext
 import com.arkivanov.essenty.lifecycle.doOnDestroy
-import kotlinx.coroutines.CoroutineScope
 
 /**
  * Admin Role Management panel component (Dynamic Plugin)
  *
- * Uses userManagementProvider and authDataProvider from PluginContext
+ * Uses UserManagementProvider and AuthDataProvider from PluginContext
  * for user and role operations.
  */
 class AdminRoleManagementComponent(
     ctx: ComponentContext,
     override val panelInfo: PanelInfo,
     private val userManagementProvider: UserManagementProvider?,
-    private val authDataProvider: AuthDataProvider?,
-    private val scope: CoroutineScope
+    private val authDataProvider: AuthDataProvider?
 ) : PanelComponentWithUI, ComponentContext by ctx {
 
     private val viewModel: AdminRoleManagementViewModel? = userManagementProvider?.let {
