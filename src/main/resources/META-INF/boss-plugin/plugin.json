@@ -9,6 +9,7 @@
   "description": "Manage user roles and permissions",
   "author": "Risa Labs",
   "url": "https://github.com/risa-labs-inc/boss-plugin-admin-role-management",
+  "requiresAdmin": true,
   "panel": {
     "position": "right_top_bottom",
     "priority": 22
