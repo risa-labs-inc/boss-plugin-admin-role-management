@@ -20,14 +20,10 @@ import kotlinx.serialization.json.Json
 private val json = Json { ignoreUnknownKeys = true }
 
 @Serializable
-data class UserRow(
+data class UserWithRolesRow(
     val id: String,
-    val email: String
-)
-
-@Serializable
-data class UserRoleRow(
-    val role: String
+    val email: String,
+    val roles: List<String> = emptyList()
 )
 
 @Serializable
@@ -75,35 +71,22 @@ class AdminRoleManagementViewModel(
     ): Result<Pair<List<UserWithRoles>, Boolean>> {
         // Fetch limit + 1 to detect hasMore
         val fetchLimit = limit + 1
-        val usersResult = dataProvider.select(
-            table = "users",
+        val result = dataProvider.select(
+            table = "users_with_roles",
             columns = "*",
             filters = filters,
             range = QueryRange(offset.toLong(), (offset + fetchLimit - 1).toLong())
         )
 
-        return usersResult.mapCatching { usersJson ->
-            val allRows = json.decodeFromString<List<UserRow>>(usersJson)
+        return result.mapCatching { jsonStr ->
+            val allRows = json.decodeFromString<List<UserWithRolesRow>>(jsonStr)
             val hasMore = allRows.size > limit
-            val userRows = if (hasMore) allRows.take(limit) else allRows
+            val rows = if (hasMore) allRows.take(limit) else allRows
 
-            val usersWithRoles = userRows.map { user ->
-                val rolesResult = dataProvider.rpc(
-                    function = "get_user_roles_with_names",
-                    parameters = """{"target_user_id":"${user.id}"}"""
-                )
-                val roles = rolesResult.map { rolesJson ->
-                    json.decodeFromString<List<UserRoleRow>>(rolesJson).map { it.role }
-                }.getOrDefault(emptyList())
-
-                UserWithRoles(
-                    id = user.id,
-                    email = user.email,
-                    roles = roles
-                )
+            val users = rows.map { row ->
+                UserWithRoles(id = row.id, email = row.email, roles = row.roles)
             }
-
-            Pair(usersWithRoles, hasMore)
+            Pair(users, hasMore)
         }
     }
 
