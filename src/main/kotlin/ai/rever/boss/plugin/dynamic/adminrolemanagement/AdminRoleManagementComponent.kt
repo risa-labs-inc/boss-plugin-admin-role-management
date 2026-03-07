@@ -3,7 +3,7 @@ package ai.rever.boss.plugin.dynamic.adminrolemanagement
 import ai.rever.boss.plugin.api.AuthDataProvider
 import ai.rever.boss.plugin.api.PanelComponentWithUI
 import ai.rever.boss.plugin.api.PanelInfo
-import ai.rever.boss.plugin.api.UserManagementProvider
+import ai.rever.boss.plugin.api.SupabaseDataProvider
 import ai.rever.boss.plugin.ui.BossTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -24,17 +24,17 @@ import com.arkivanov.essenty.lifecycle.doOnDestroy
 /**
  * Admin Role Management panel component (Dynamic Plugin)
  *
- * Uses UserManagementProvider and AuthDataProvider from PluginContext
+ * Uses SupabaseDataProvider and AuthDataProvider from PluginContext
  * for user and role operations.
  */
 class AdminRoleManagementComponent(
     ctx: ComponentContext,
     override val panelInfo: PanelInfo,
-    private val userManagementProvider: UserManagementProvider?,
+    private val supabaseDataProvider: SupabaseDataProvider?,
     private val authDataProvider: AuthDataProvider?
 ) : PanelComponentWithUI, ComponentContext by ctx {
 
-    private val viewModel: AdminRoleManagementViewModel? = userManagementProvider?.let {
+    private val viewModel: AdminRoleManagementViewModel? = supabaseDataProvider?.let {
         AdminRoleManagementViewModel(it)
     }
 
@@ -54,7 +54,6 @@ class AdminRoleManagementComponent(
                     currentUserId = currentUser?.id
                 )
             } else {
-                // Provider not available - show stub UI
                 ProvidersNotAvailableContent()
             }
         }
@@ -101,7 +100,7 @@ private fun ProvidersNotAvailableContent() {
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "User management and auth providers are required.\nPlease update to plugin-api 1.0.4 or later.",
+                        text = "Supabase data and auth providers are required.\nPlease update to plugin-api 1.0.29 or later.",
                         fontSize = 12.sp,
                         color = MaterialTheme.colors.onSurface.copy(alpha = 0.7f)
                     )

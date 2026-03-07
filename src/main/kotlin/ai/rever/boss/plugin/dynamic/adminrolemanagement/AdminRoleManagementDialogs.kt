@@ -1,6 +1,6 @@
 package ai.rever.boss.plugin.dynamic.adminrolemanagement
 
-import ai.rever.boss.plugin.api.UserWithRolesData
+// Uses local UserWithRoles data class from AdminRoleManagementViewModel
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -25,7 +25,7 @@ import androidx.compose.ui.window.Dialog
 
 @Composable
 fun AssignRoleDialog(
-    user: UserWithRolesData,
+    user: UserWithRoles,
     availableRoles: List<String>,
     selectedRole: String?,
     onRoleSelected: (String) -> Unit,
@@ -185,7 +185,7 @@ fun RoleDropdown(
 
 @Composable
 fun RemoveRoleConfirmationDialog(
-    user: UserWithRolesData,
+    user: UserWithRoles,
     roleName: String,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
@@ -270,7 +270,7 @@ fun RemoveRoleConfirmationDialog(
 
 @Composable
 fun DeleteUserConfirmationDialog(
-    user: UserWithRolesData,
+    user: UserWithRoles,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
     isLoading: Boolean

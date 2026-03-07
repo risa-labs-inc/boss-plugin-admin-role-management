@@ -2,12 +2,13 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     kotlin("jvm") version "2.3.0"
+    kotlin("plugin.serialization") version "2.3.0"
     id("org.jetbrains.compose") version "1.10.0"
     id("org.jetbrains.kotlin.plugin.compose") version "2.3.0"
 }
 
 group = "ai.rever.boss.plugin.dynamic"
-version = "1.0.6"
+version = "1.1.0"
 
 java {
     toolchain {
@@ -34,12 +35,12 @@ repositories {
 dependencies {
     if (useLocalDependencies) {
         // Local development: use boss-plugin-api JAR from sibling repo
-        compileOnly(files("$bossPluginApiPath/build/libs/boss-plugin-api-1.0.20.jar"))
+        compileOnly(files("$bossPluginApiPath/build/libs/boss-plugin-api-1.0.31.jar"))
     } else {
         // CI: use downloaded JAR
         compileOnly(files("build/downloaded-deps/boss-plugin-api.jar"))
     }
-    
+
     // Compose dependencies
     implementation(compose.desktop.currentOs)
     implementation(compose.runtime)
@@ -50,20 +51,23 @@ dependencies {
 
     // Compose Icons (FeatherIcons)
     implementation("br.com.devsrsouza.compose.icons:feather:1.1.1")
-    
+
     // Decompose for ComponentContext
     implementation("com.arkivanov.decompose:decompose:3.3.0")
     implementation("com.arkivanov.essenty:lifecycle:2.5.0")
-    
+
     // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2")
+
+    // Serialization (for JSON parsing of SupabaseDataProvider responses)
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
 }
 
 // Task to build plugin JAR with compiled classes only
 tasks.register<Jar>("buildPluginJar") {
     archiveFileName.set("boss-plugin-admin-role-management-${version}.jar")
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-    
+
     manifest {
         attributes(
             "Implementation-Title" to "BOSS Admin Role Management Plugin",
@@ -71,10 +75,10 @@ tasks.register<Jar>("buildPluginJar") {
             "Main-Class" to "ai.rever.boss.plugin.dynamic.adminrolemanagement.AdminRoleManagementDynamicPlugin"
         )
     }
-    
+
     // Include compiled classes
     from(sourceSets.main.get().output)
-    
+
     // Include plugin manifest
     from("src/main/resources")
 }

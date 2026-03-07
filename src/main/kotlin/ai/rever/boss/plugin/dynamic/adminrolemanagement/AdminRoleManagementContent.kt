@@ -1,6 +1,6 @@
 package ai.rever.boss.plugin.dynamic.adminrolemanagement
 
-import ai.rever.boss.plugin.api.UserWithRolesData
+// Uses local UserWithRoles data class from AdminRoleManagementViewModel
 import ai.rever.boss.plugin.scrollbar.getPanelScrollbarConfig
 import ai.rever.boss.plugin.scrollbar.lazyListScrollbar
 import ai.rever.boss.plugin.ui.BossSearchBar
@@ -173,11 +173,11 @@ fun AdminRoleManagementContent(
 
 @Composable
 fun UserList(
-    users: List<UserWithRolesData>,
+    users: List<UserWithRoles>,
     currentUserId: String?,
-    onAssignRole: (UserWithRolesData) -> Unit,
-    onRemoveRole: (UserWithRolesData, String) -> Unit,
-    onDeleteUser: (UserWithRolesData) -> Unit,
+    onAssignRole: (UserWithRoles) -> Unit,
+    onRemoveRole: (UserWithRoles, String) -> Unit,
+    onDeleteUser: (UserWithRoles) -> Unit,
     onLoadMore: () -> Unit,
     isLoadingMore: Boolean,
     hasMore: Boolean,
@@ -270,7 +270,7 @@ fun LoadingMoreIndicator(
 
 @Composable
 fun UserCard(
-    user: UserWithRolesData,
+    user: UserWithRoles,
     currentUserId: String?,
     onAssignRole: () -> Unit,
     onRemoveRole: (String) -> Unit,

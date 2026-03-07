@@ -1,26 +1,52 @@
 package ai.rever.boss.plugin.dynamic.adminrolemanagement
 
-import ai.rever.boss.plugin.api.RoleInfoData
-import ai.rever.boss.plugin.api.UserManagementProvider
-import ai.rever.boss.plugin.api.UserWithRolesData
+import ai.rever.boss.plugin.api.FilterOperator
+import ai.rever.boss.plugin.api.QueryFilter
+import ai.rever.boss.plugin.api.QueryRange
+import ai.rever.boss.plugin.api.SupabaseDataProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
+
+private val json = Json { ignoreUnknownKeys = true }
+
+@Serializable
+data class UserRow(
+    val id: String,
+    val email: String
+)
+
+@Serializable
+data class UserRoleRow(
+    val role: String
+)
+
+@Serializable
+data class RoleRow(
+    val id: String = "",
+    val name: String,
+    val description: String? = null
+)
 
 /**
  * ViewModel for Admin Role Management
  *
- * Uses UserManagementProvider interface for data operations.
+ * Uses SupabaseDataProvider for data operations via generic select/rpc calls.
  */
 class AdminRoleManagementViewModel(
-    private val userManagementProvider: UserManagementProvider
+    private val dataProvider: SupabaseDataProvider
 ) {
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
+    private var searchJob: Job? = null
 
     var state by mutableStateOf(AdminRoleState())
         private set
@@ -34,7 +60,55 @@ class AdminRoleManagementViewModel(
         scope.cancel()
     }
 
+    private fun refreshCurrentView() {
+        if (state.searchQuery.isBlank()) {
+            loadAllUsers()
+        } else {
+            searchUsers(state.searchQuery)
+        }
+    }
+
+    private suspend fun fetchUsersWithRoles(
+        filters: List<QueryFilter> = emptyList(),
+        offset: Int,
+        limit: Int
+    ): Result<Pair<List<UserWithRoles>, Boolean>> {
+        // Fetch limit + 1 to detect hasMore
+        val fetchLimit = limit + 1
+        val usersResult = dataProvider.select(
+            table = "users",
+            columns = "*",
+            filters = filters,
+            range = QueryRange(offset.toLong(), (offset + fetchLimit - 1).toLong())
+        )
+
+        return usersResult.mapCatching { usersJson ->
+            val allRows = json.decodeFromString<List<UserRow>>(usersJson)
+            val hasMore = allRows.size > limit
+            val userRows = if (hasMore) allRows.take(limit) else allRows
+
+            val usersWithRoles = userRows.map { user ->
+                val rolesResult = dataProvider.rpc(
+                    function = "get_user_roles",
+                    parameters = """{"target_user_id":"${user.id}"}"""
+                )
+                val roles = rolesResult.map { rolesJson ->
+                    json.decodeFromString<List<UserRoleRow>>(rolesJson).map { it.role }
+                }.getOrDefault(emptyList())
+
+                UserWithRoles(
+                    id = user.id,
+                    email = user.email,
+                    roles = roles
+                )
+            }
+
+            Pair(usersWithRoles, hasMore)
+        }
+    }
+
     fun loadAllUsers() {
+        searchJob?.cancel()
         state = state.copy(
             isLoading = true,
             errorMessage = null,
@@ -44,16 +118,15 @@ class AdminRoleManagementViewModel(
         )
 
         scope.launch {
-            val result = userManagementProvider.getAllUsersWithRoles(limit = state.pageSize, offset = 0)
+            val result = fetchUsersWithRoles(offset = 0, limit = state.pageSize)
 
-            result.onSuccess { paginatedResult ->
-                val users = paginatedResult.data
+            result.onSuccess { (users, hasMore) ->
                 state = state.copy(
                     allUsers = users,
                     filteredUsers = users,
                     isLoading = false,
                     currentOffset = users.size,
-                    hasMore = paginatedResult.hasMore
+                    hasMore = hasMore
                 )
             }.onFailure { exception ->
                 state = state.copy(
@@ -66,10 +139,11 @@ class AdminRoleManagementViewModel(
 
     fun loadAvailableRoles() {
         scope.launch {
-            val result = userManagementProvider.getAllRoles()
+            val result = dataProvider.select(table = "roles", columns = "*")
 
-            result.onSuccess { roles ->
-                state = state.copy(availableRoles = roles)
+            result.onSuccess { rolesJson ->
+                val roles = json.decodeFromString<List<RoleRow>>(rolesJson)
+                state = state.copy(availableRoles = roles.map { RoleInfo(it.id, it.name, it.description) })
             }.onFailure {
                 state = state.copy(availableRoles = emptyList())
             }
@@ -89,13 +163,9 @@ class AdminRoleManagementViewModel(
         state = state.copy(isLoadingMore = true, errorMessage = null)
 
         scope.launch {
-            val result = userManagementProvider.getAllUsersWithRoles(
-                limit = state.pageSize,
-                offset = state.currentOffset
-            )
+            val result = fetchUsersWithRoles(offset = state.currentOffset, limit = state.pageSize)
 
-            result.onSuccess { paginatedResult ->
-                val newUsers = paginatedResult.data
+            result.onSuccess { (newUsers, hasMore) ->
                 val allUsers = state.allUsers + newUsers
 
                 state = state.copy(
@@ -103,7 +173,7 @@ class AdminRoleManagementViewModel(
                     filteredUsers = allUsers,
                     isLoadingMore = false,
                     currentOffset = state.currentOffset + newUsers.size,
-                    hasMore = paginatedResult.hasMore
+                    hasMore = hasMore
                 )
             }.onFailure { exception ->
                 state = state.copy(
@@ -115,12 +185,11 @@ class AdminRoleManagementViewModel(
     }
 
     fun searchUsers(query: String) {
+        searchJob?.cancel()
+
         state = state.copy(
             searchQuery = query,
-            isLoading = true,
-            errorMessage = null,
-            currentOffset = 0,
-            hasMore = true
+            errorMessage = null
         )
 
         if (query.isBlank()) {
@@ -128,21 +197,25 @@ class AdminRoleManagementViewModel(
             return
         }
 
-        scope.launch {
-            val result = userManagementProvider.searchUsersByEmail(
-                query = query,
-                limit = state.pageSize,
-                offset = 0
-            )
+        state = state.copy(
+            isLoading = true,
+            currentOffset = 0,
+            hasMore = false
+        )
 
-            result.onSuccess { paginatedResult ->
-                val users = paginatedResult.data
+        searchJob = scope.launch {
+            delay(300)
+
+            val filters = listOf(QueryFilter("email", FilterOperator.ILIKE, "%$query%"))
+            val result = fetchUsersWithRoles(filters = filters, offset = 0, limit = state.pageSize)
+
+            result.onSuccess { (users, hasMore) ->
                 state = state.copy(
                     allUsers = users,
                     filteredUsers = users,
                     isLoading = false,
                     currentOffset = users.size,
-                    hasMore = paginatedResult.hasMore
+                    hasMore = hasMore
                 )
             }.onFailure { exception ->
                 state = state.copy(
@@ -161,14 +234,14 @@ class AdminRoleManagementViewModel(
         state = state.copy(isLoadingMore = true, errorMessage = null)
 
         scope.launch {
-            val result = userManagementProvider.searchUsersByEmail(
-                query = state.searchQuery,
-                limit = state.pageSize,
-                offset = state.currentOffset
+            val filters = listOf(QueryFilter("email", FilterOperator.ILIKE, "%${state.searchQuery}%"))
+            val result = fetchUsersWithRoles(
+                filters = filters,
+                offset = state.currentOffset,
+                limit = state.pageSize
             )
 
-            result.onSuccess { paginatedResult ->
-                val newUsers = paginatedResult.data
+            result.onSuccess { (newUsers, hasMore) ->
                 val allUsers = state.allUsers + newUsers
 
                 state = state.copy(
@@ -176,7 +249,7 @@ class AdminRoleManagementViewModel(
                     filteredUsers = allUsers,
                     isLoadingMore = false,
                     currentOffset = state.currentOffset + newUsers.size,
-                    hasMore = paginatedResult.hasMore
+                    hasMore = hasMore
                 )
             }.onFailure { exception ->
                 state = state.copy(
@@ -191,14 +264,17 @@ class AdminRoleManagementViewModel(
         state = state.copy(isOperationInProgress = true, errorMessage = null)
 
         scope.launch {
-            val result = userManagementProvider.assignRole(userId, roleName)
+            val result = dataProvider.rpc(
+                function = "assign_role_to_user",
+                parameters = """{"target_user_id":"$userId","role_name":"$roleName"}"""
+            )
 
             if (result.isSuccess) {
                 state = state.copy(
                     isOperationInProgress = false,
                     successMessage = "Role $roleName assigned successfully"
                 )
-                loadAllUsers()
+                refreshCurrentView()
             } else {
                 val error = result.exceptionOrNull()?.message ?: "Unknown error"
                 state = state.copy(
@@ -213,14 +289,17 @@ class AdminRoleManagementViewModel(
         state = state.copy(isOperationInProgress = true, errorMessage = null)
 
         scope.launch {
-            val result = userManagementProvider.removeRole(userId, roleName)
+            val result = dataProvider.rpc(
+                function = "remove_role_from_user",
+                parameters = """{"target_user_id":"$userId","role_name":"$roleName"}"""
+            )
 
             if (result.isSuccess) {
                 state = state.copy(
                     isOperationInProgress = false,
                     successMessage = "Role $roleName removed successfully"
                 )
-                loadAllUsers()
+                refreshCurrentView()
             } else {
                 val error = result.exceptionOrNull()?.message ?: "Unknown error"
                 state = state.copy(
@@ -235,18 +314,17 @@ class AdminRoleManagementViewModel(
         state = state.copy(isOperationInProgress = true, errorMessage = null)
 
         scope.launch {
-            val result = userManagementProvider.deleteUser(userId)
+            val result = dataProvider.rpc(
+                function = "delete_user",
+                parameters = """{"target_user_id":"$userId"}"""
+            )
 
             if (result.isSuccess) {
                 state = state.copy(
                     isOperationInProgress = false,
                     successMessage = "User deleted successfully"
                 )
-                if (state.searchQuery.isBlank()) {
-                    loadAllUsers()
-                } else {
-                    searchUsers(state.searchQuery)
-                }
+                refreshCurrentView()
             } else {
                 val error = result.exceptionOrNull()?.message ?: "Unknown error"
                 state = state.copy(
@@ -257,7 +335,7 @@ class AdminRoleManagementViewModel(
         }
     }
 
-    fun selectUser(user: UserWithRolesData) {
+    fun selectUser(user: UserWithRoles) {
         state = state.copy(selectedUser = user)
     }
 
@@ -265,7 +343,7 @@ class AdminRoleManagementViewModel(
         state = state.copy(selectedUser = null)
     }
 
-    fun showAssignRoleDialog(user: UserWithRolesData) {
+    fun showAssignRoleDialog(user: UserWithRoles) {
         state = state.copy(
             selectedUser = user,
             showAssignRoleDialog = true
@@ -279,7 +357,7 @@ class AdminRoleManagementViewModel(
         )
     }
 
-    fun showRemoveRoleDialog(user: UserWithRolesData, roleName: String) {
+    fun showRemoveRoleDialog(user: UserWithRoles, roleName: String) {
         state = state.copy(
             selectedUser = user,
             selectedRoleToRemove = roleName,
@@ -294,7 +372,7 @@ class AdminRoleManagementViewModel(
         )
     }
 
-    fun showDeleteUserDialog(user: UserWithRolesData) {
+    fun showDeleteUserDialog(user: UserWithRoles) {
         state = state.copy(
             selectedUser = user,
             showDeleteUserDialog = true
@@ -309,7 +387,7 @@ class AdminRoleManagementViewModel(
         state = state.copy(selectedRoleToAssign = roleName)
     }
 
-    fun getAvailableRolesForUser(user: UserWithRolesData): List<String> {
+    fun getAvailableRolesForUser(user: UserWithRoles): List<String> {
         val userRoleNames = user.roles
         return state.availableRoles
             .map { it.name }
@@ -325,22 +403,34 @@ class AdminRoleManagementViewModel(
     }
 }
 
+data class UserWithRoles(
+    val id: String,
+    val email: String,
+    val roles: List<String>
+)
+
+data class RoleInfo(
+    val id: String,
+    val name: String,
+    val description: String?
+)
+
 data class AdminRoleState(
-    val allUsers: List<UserWithRolesData> = emptyList(),
-    val filteredUsers: List<UserWithRolesData> = emptyList(),
+    val allUsers: List<UserWithRoles> = emptyList(),
+    val filteredUsers: List<UserWithRoles> = emptyList(),
     val searchQuery: String = "",
     val isLoading: Boolean = false,
     val isLoadingMore: Boolean = false,
     val isOperationInProgress: Boolean = false,
     val errorMessage: String? = null,
     val successMessage: String? = null,
-    val selectedUser: UserWithRolesData? = null,
+    val selectedUser: UserWithRoles? = null,
     val showAssignRoleDialog: Boolean = false,
     val showRemoveRoleDialog: Boolean = false,
     val showDeleteUserDialog: Boolean = false,
     val selectedRoleToAssign: String? = null,
     val selectedRoleToRemove: String? = null,
-    val availableRoles: List<RoleInfoData> = emptyList(),
+    val availableRoles: List<RoleInfo> = emptyList(),
     val currentOffset: Int = 0,
     val pageSize: Int = 50,
     val hasMore: Boolean = true
