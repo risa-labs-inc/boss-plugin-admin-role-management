@@ -89,7 +89,7 @@ class AdminRoleManagementViewModel(
 
             val usersWithRoles = userRows.map { user ->
                 val rolesResult = dataProvider.rpc(
-                    function = "get_user_roles",
+                    function = "get_user_roles_with_names",
                     parameters = """{"target_user_id":"${user.id}"}"""
                 )
                 val roles = rolesResult.map { rolesJson ->
@@ -432,6 +432,6 @@ data class AdminRoleState(
     val selectedRoleToRemove: String? = null,
     val availableRoles: List<RoleInfo> = emptyList(),
     val currentOffset: Int = 0,
-    val pageSize: Int = 50,
+    val pageSize: Int = 20,
     val hasMore: Boolean = true
 )
