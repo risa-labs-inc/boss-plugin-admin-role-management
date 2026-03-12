@@ -249,7 +249,7 @@ class AdminRoleManagementViewModel(
         scope.launch {
             val result = dataProvider.rpc(
                 function = "assign_role_to_user",
-                parameters = """{"target_user_id":"$userId","role_name":"$roleName"}"""
+                parameters = """{"target_user_id":"$userId","target_role":"$roleName"}"""
             )
 
             if (result.isSuccess) {
@@ -274,7 +274,7 @@ class AdminRoleManagementViewModel(
         scope.launch {
             val result = dataProvider.rpc(
                 function = "remove_role_from_user",
-                parameters = """{"target_user_id":"$userId","role_name":"$roleName"}"""
+                parameters = """{"target_user_id":"$userId","target_role":"$roleName"}"""
             )
 
             if (result.isSuccess) {
