@@ -34,6 +34,16 @@ data class RoleRow(
 )
 
 /**
+ * Envelope returned by the get_grantable_roles() RPC.
+ */
+@Serializable
+data class GrantableRolesEnvelope(
+    val success: Boolean = false,
+    val data: List<RoleRow> = emptyList(),
+    val error: String? = null
+)
+
+/**
  * ViewModel for Admin Role Management
  *
  * Uses SupabaseDataProvider for data operations via generic select/rpc calls.
@@ -120,12 +130,23 @@ class AdminRoleManagementViewModel(
         }
     }
 
+    /**
+     * Load the roles the *current* user is allowed to assign.
+     *
+     * Uses the get_grantable_roles() RPC (delegation derived from the role
+     * hierarchy) instead of reading the full roles table, so e.g. a boss_admin
+     * is only offered roles strictly below it and can never assign finance_admin.
+     * The server enforces the same rule in assign_role_to_user.
+     */
     fun loadAvailableRoles() {
         scope.launch {
-            val result = dataProvider.select(table = "roles", columns = "*")
+            val result = dataProvider.rpc(function = "get_grantable_roles", parameters = "{}")
 
-            result.onSuccess { rolesJson ->
-                val roles = json.decodeFromString<List<RoleRow>>(rolesJson)
+            result.onSuccess { responseJson ->
+                val envelope = runCatching {
+                    json.decodeFromString<GrantableRolesEnvelope>(responseJson)
+                }.getOrNull()
+                val roles = envelope?.data ?: emptyList()
                 state = state.copy(availableRoles = roles.map { RoleInfo(it.id, it.name, it.description) })
             }.onFailure {
                 state = state.copy(availableRoles = emptyList())
