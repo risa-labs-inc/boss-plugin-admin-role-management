@@ -49,9 +49,11 @@ class AdminRoleManagementComponent(
         BossTheme {
             if (viewModel != null && authDataProvider != null) {
                 val currentUser by authDataProvider.currentUser.collectAsState()
+                val isAdmin by authDataProvider.isAdmin.collectAsState()
                 AdminRoleManagementContent(
                     viewModel = viewModel,
-                    currentUserId = currentUser?.id
+                    currentUserId = currentUser?.id,
+                    canDeleteUsers = isAdmin
                 )
             } else {
                 ProvidersNotAvailableContent()
