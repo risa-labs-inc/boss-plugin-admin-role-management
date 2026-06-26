@@ -102,6 +102,10 @@ fun AdminRoleManagementContent(
                         users = state.filteredUsers,
                         currentUserId = currentUserId,
                         canDeleteUsers = canDeleteUsers,
+                        // A role's Remove-X shows only if the viewer can revoke it:
+                        // admins can revoke anything; others only their grantable roles
+                        // (state.availableRoles), matching remove_role_from_user server-side.
+                        canRevokeRole = { role -> canDeleteUsers || state.availableRoles.any { it.name == role } },
                         onAssignRole = { user -> viewModel.showAssignRoleDialog(user) },
                         onRemoveRole = { user, role -> viewModel.showRemoveRoleDialog(user, role) },
                         onDeleteUser = { user -> viewModel.showDeleteUserDialog(user) },
@@ -178,6 +182,7 @@ fun UserList(
     users: List<UserWithRoles>,
     currentUserId: String?,
     canDeleteUsers: Boolean,
+    canRevokeRole: (String) -> Boolean,
     onAssignRole: (UserWithRoles) -> Unit,
     onRemoveRole: (UserWithRoles, String) -> Unit,
     onDeleteUser: (UserWithRoles) -> Unit,
@@ -201,6 +206,7 @@ fun UserList(
                 user = user,
                 currentUserId = currentUserId,
                 canDeleteUsers = canDeleteUsers,
+                canRevokeRole = canRevokeRole,
                 onAssignRole = { onAssignRole(user) },
                 onRemoveRole = { role -> onRemoveRole(user, role) },
                 onDeleteUser = { onDeleteUser(user) },
@@ -277,6 +283,7 @@ fun UserCard(
     user: UserWithRoles,
     currentUserId: String?,
     canDeleteUsers: Boolean,
+    canRevokeRole: (String) -> Boolean,
     onAssignRole: () -> Unit,
     onRemoveRole: (String) -> Unit,
     onDeleteUser: () -> Unit,
@@ -317,6 +324,7 @@ fun UserCard(
                             roleName = roleName,
                             userId = user.id,
                             currentUserId = currentUserId,
+                            canRevoke = canRevokeRole(roleName),
                             onRemove = { onRemoveRole(roleName) }
                         )
                     }
@@ -373,6 +381,7 @@ fun RoleBadge(
     roleName: String,
     userId: String,
     currentUserId: String?,
+    canRevoke: Boolean,
     onRemove: () -> Unit
 ) {
     val isOwnAccount = currentUserId == userId
@@ -381,7 +390,7 @@ fun RoleBadge(
     val isRemovable = when {
         roleName == "user" -> false
         roleName == "admin" && isOwnAccount -> false
-        else -> true
+        else -> canRevoke
     }
 
     Surface(
