@@ -30,7 +30,8 @@ import androidx.compose.ui.unit.sp
 @Composable
 fun AdminRoleManagementContent(
     viewModel: AdminRoleManagementViewModel,
-    currentUserId: String?
+    currentUserId: String?,
+    canDeleteUsers: Boolean
 ) {
     val state = viewModel.state
 
@@ -100,6 +101,7 @@ fun AdminRoleManagementContent(
                     UserList(
                         users = state.filteredUsers,
                         currentUserId = currentUserId,
+                        canDeleteUsers = canDeleteUsers,
                         onAssignRole = { user -> viewModel.showAssignRoleDialog(user) },
                         onRemoveRole = { user, role -> viewModel.showRemoveRoleDialog(user, role) },
                         onDeleteUser = { user -> viewModel.showDeleteUserDialog(user) },
@@ -175,6 +177,7 @@ fun AdminRoleManagementContent(
 fun UserList(
     users: List<UserWithRoles>,
     currentUserId: String?,
+    canDeleteUsers: Boolean,
     onAssignRole: (UserWithRoles) -> Unit,
     onRemoveRole: (UserWithRoles, String) -> Unit,
     onDeleteUser: (UserWithRoles) -> Unit,
@@ -197,6 +200,7 @@ fun UserList(
             UserCard(
                 user = user,
                 currentUserId = currentUserId,
+                canDeleteUsers = canDeleteUsers,
                 onAssignRole = { onAssignRole(user) },
                 onRemoveRole = { role -> onRemoveRole(user, role) },
                 onDeleteUser = { onDeleteUser(user) },
@@ -272,6 +276,7 @@ fun LoadingMoreIndicator(
 fun UserCard(
     user: UserWithRoles,
     currentUserId: String?,
+    canDeleteUsers: Boolean,
     onAssignRole: () -> Unit,
     onRemoveRole: (String) -> Unit,
     onDeleteUser: () -> Unit,
@@ -338,7 +343,9 @@ fun UserCard(
                     Text("Assign Role", color = Color.White, fontSize = 12.sp)
                 }
 
-                if (!isAdmin) {
+                // Delete is admin-only (delete_user RPC enforces is_user_admin);
+                // hidden for non-admins (e.g. boss_admin) and for admin targets.
+                if (!isAdmin && canDeleteUsers) {
                     Button(
                         onClick = onDeleteUser,
                         colors = ButtonDefaults.buttonColors(
