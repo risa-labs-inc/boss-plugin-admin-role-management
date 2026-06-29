@@ -1,6 +1,7 @@
 package ai.rever.boss.plugin.dynamic.adminrolemanagement
 
 // Uses local UserWithRoles data class from AdminRoleManagementViewModel
+import ai.rever.boss.plugin.ui.BossThemeColors
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -17,7 +18,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -36,13 +36,13 @@ fun AssignRoleDialog(
     Dialog(onDismissRequest = { if (!isLoading) onDismiss() }) {
         Surface(
             shape = RoundedCornerShape(8.dp),
-            color = Color(0xFF3C3F41),
+            color = BossThemeColors.SurfaceColor,
             modifier = Modifier.width(400.dp)
         ) {
             Column(modifier = Modifier.padding(24.dp)) {
                 Text(
                     "Assign Role",
-                    color = Color.White,
+                    color = BossThemeColors.TextPrimary,
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold
                 )
@@ -51,7 +51,7 @@ fun AssignRoleDialog(
 
                 Text(
                     "User: ${user.email}",
-                    color = Color.Gray,
+                    color = BossThemeColors.TextSecondary,
                     fontSize = 14.sp
                 )
 
@@ -60,7 +60,7 @@ fun AssignRoleDialog(
                 if (availableRoles.isEmpty()) {
                     Text(
                         "This user already has all available roles.",
-                        color = Color.Gray,
+                        color = BossThemeColors.TextSecondary,
                         fontSize = 14.sp
                     )
                     Spacer(modifier = Modifier.height(16.dp))
@@ -71,16 +71,16 @@ fun AssignRoleDialog(
                         Button(
                             onClick = onDismiss,
                             colors = ButtonDefaults.buttonColors(
-                                backgroundColor = Color(0xFF4A90E2)
+                                backgroundColor = BossThemeColors.AccentColor
                             )
                         ) {
-                            Text("Close", color = Color.White)
+                            Text("Close", color = BossThemeColors.TextPrimary)
                         }
                     }
                 } else {
                     Text(
                         "Select Role:",
-                        color = Color.White,
+                        color = BossThemeColors.TextPrimary,
                         fontSize = 14.sp,
                         modifier = Modifier.padding(bottom = 8.dp)
                     )
@@ -101,25 +101,25 @@ fun AssignRoleDialog(
                             onClick = onDismiss,
                             enabled = !isLoading
                         ) {
-                            Text("Cancel", color = Color.Gray)
+                            Text("Cancel", color = BossThemeColors.TextSecondary)
                         }
 
                         Button(
                             onClick = onConfirm,
                             enabled = !isLoading && selectedRole != null,
                             colors = ButtonDefaults.buttonColors(
-                                backgroundColor = Color(0xFF4A90E2),
-                                disabledBackgroundColor = Color.Gray
+                                backgroundColor = BossThemeColors.AccentColor,
+                                disabledBackgroundColor = BossThemeColors.TextMuted
                             )
                         ) {
                             if (isLoading) {
                                 CircularProgressIndicator(
                                     modifier = Modifier.size(16.dp),
-                                    color = Color.White,
+                                    color = BossThemeColors.TextPrimary,
                                     strokeWidth = 2.dp
                                 )
                             } else {
-                                Text("Assign", color = Color.White)
+                                Text("Assign", color = BossThemeColors.TextPrimary)
                             }
                         }
                     }
@@ -143,7 +143,7 @@ fun RoleDropdown(
                 .fillMaxWidth()
                 .clickable { expanded = true },
             shape = RoundedCornerShape(4.dp),
-            color = Color(0xFF2B2D30)
+            color = BossThemeColors.SurfaceColor
         ) {
             Row(
                 modifier = Modifier.padding(12.dp),
@@ -152,13 +152,13 @@ fun RoleDropdown(
             ) {
                 Text(
                     selectedRole ?: "Select a role...",
-                    color = if (selectedRole != null) Color.White else Color.Gray,
+                    color = if (selectedRole != null) BossThemeColors.TextPrimary else BossThemeColors.TextSecondary,
                     fontSize = 14.sp
                 )
                 Icon(
                     Icons.Default.KeyboardArrowDown,
                     contentDescription = "Expand",
-                    tint = Color.Gray,
+                    tint = BossThemeColors.TextSecondary,
                     modifier = Modifier.size(16.dp)
                 )
             }
@@ -167,7 +167,7 @@ fun RoleDropdown(
         DropdownMenu(
             expanded = expanded,
             onDismissRequest = { expanded = false },
-            modifier = Modifier.background(Color(0xFF3C3F41))
+            modifier = Modifier.background(BossThemeColors.SurfaceColor)
         ) {
             roles.forEach { roleName ->
                 DropdownMenuItem(
@@ -176,7 +176,7 @@ fun RoleDropdown(
                         expanded = false
                     }
                 ) {
-                    Text(roleName, color = Color.White, fontSize = 14.sp)
+                    Text(roleName, color = BossThemeColors.TextPrimary, fontSize = 14.sp)
                 }
             }
         }
@@ -194,7 +194,7 @@ fun RemoveRoleConfirmationDialog(
     Dialog(onDismissRequest = { if (!isLoading) onDismiss() }) {
         Surface(
             shape = RoundedCornerShape(8.dp),
-            color = Color(0xFF3C3F41),
+            color = BossThemeColors.SurfaceColor,
             modifier = Modifier.width(400.dp)
         ) {
             Column(modifier = Modifier.padding(24.dp)) {
@@ -205,13 +205,13 @@ fun RemoveRoleConfirmationDialog(
                     Icon(
                         Icons.Default.Warning,
                         contentDescription = "Warning",
-                        tint = Color(0xFFFF9800),
+                        tint = BossThemeColors.WarningColor,
                         modifier = Modifier.size(24.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         "Remove Role",
-                        color = Color.White,
+                        color = BossThemeColors.TextPrimary,
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold
                     )
@@ -219,7 +219,7 @@ fun RemoveRoleConfirmationDialog(
 
                 Text(
                     "Are you sure you want to remove the \"$roleName\" role from this user?",
-                    color = Color.White,
+                    color = BossThemeColors.TextPrimary,
                     fontSize = 14.sp
                 )
 
@@ -227,7 +227,7 @@ fun RemoveRoleConfirmationDialog(
 
                 Text(
                     "User: ${user.email}",
-                    color = Color.Gray,
+                    color = BossThemeColors.TextSecondary,
                     fontSize = 12.sp
                 )
 
@@ -241,25 +241,25 @@ fun RemoveRoleConfirmationDialog(
                         onClick = onDismiss,
                         enabled = !isLoading
                     ) {
-                        Text("Cancel", color = Color.Gray)
+                        Text("Cancel", color = BossThemeColors.TextSecondary)
                     }
 
                     Button(
                         onClick = onConfirm,
                         enabled = !isLoading,
                         colors = ButtonDefaults.buttonColors(
-                            backgroundColor = Color(0xFFE91E63),
-                            disabledBackgroundColor = Color.Gray
+                            backgroundColor = BossThemeColors.ErrorColor,
+                            disabledBackgroundColor = BossThemeColors.TextMuted
                         )
                     ) {
                         if (isLoading) {
                             CircularProgressIndicator(
                                 modifier = Modifier.size(16.dp),
-                                color = Color.White,
+                                color = BossThemeColors.TextPrimary,
                                 strokeWidth = 2.dp
                             )
                         } else {
-                            Text("Remove", color = Color.White)
+                            Text("Remove", color = BossThemeColors.TextPrimary)
                         }
                     }
                 }
@@ -278,7 +278,7 @@ fun DeleteUserConfirmationDialog(
     Dialog(onDismissRequest = { if (!isLoading) onDismiss() }) {
         Surface(
             shape = RoundedCornerShape(16.dp),
-            color = Color(0xFF2B2D30)
+            color = BossThemeColors.SurfaceColor
         ) {
             Column(
                 modifier = Modifier
@@ -292,12 +292,12 @@ fun DeleteUserConfirmationDialog(
                     Icon(
                         Icons.Default.Warning,
                         contentDescription = "Warning",
-                        tint = Color(0xFFE91E63),
+                        tint = BossThemeColors.ErrorColor,
                         modifier = Modifier.size(24.dp)
                     )
                     Text(
                         "Delete User",
-                        color = Color.White,
+                        color = BossThemeColors.TextPrimary,
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold
                     )
@@ -307,7 +307,7 @@ fun DeleteUserConfirmationDialog(
 
                 Text(
                     "Are you sure you want to delete this user? This action cannot be undone.",
-                    color = Color.White,
+                    color = BossThemeColors.TextPrimary,
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Medium
                 )
@@ -316,7 +316,7 @@ fun DeleteUserConfirmationDialog(
 
                 Text(
                     "User: ${user.email}",
-                    color = Color.Gray,
+                    color = BossThemeColors.TextSecondary,
                     fontSize = 12.sp
                 )
 
@@ -324,13 +324,13 @@ fun DeleteUserConfirmationDialog(
 
                 Text(
                     "This will delete:",
-                    color = Color(0xFFE91E63),
+                    color = BossThemeColors.ErrorColor,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Medium
                 )
                 Text(
                     "• User account\n• All role assignments\n• User data",
-                    color = Color.Gray,
+                    color = BossThemeColors.TextSecondary,
                     fontSize = 12.sp,
                     modifier = Modifier.padding(start = 8.dp, top = 4.dp)
                 )
@@ -345,21 +345,21 @@ fun DeleteUserConfirmationDialog(
                         onClick = onDismiss,
                         enabled = !isLoading
                     ) {
-                        Text("Cancel", color = Color.Gray)
+                        Text("Cancel", color = BossThemeColors.TextSecondary)
                     }
 
                     Button(
                         onClick = onConfirm,
                         enabled = !isLoading,
                         colors = ButtonDefaults.buttonColors(
-                            backgroundColor = Color(0xFFE91E63),
-                            disabledBackgroundColor = Color.Gray
+                            backgroundColor = BossThemeColors.ErrorColor,
+                            disabledBackgroundColor = BossThemeColors.TextMuted
                         )
                     ) {
                         if (isLoading) {
                             CircularProgressIndicator(
                                 modifier = Modifier.size(16.dp),
-                                color = Color.White,
+                                color = BossThemeColors.TextPrimary,
                                 strokeWidth = 2.dp
                             )
                         } else {
@@ -371,9 +371,9 @@ fun DeleteUserConfirmationDialog(
                                     Icons.Default.Delete,
                                     contentDescription = "Delete",
                                     modifier = Modifier.size(16.dp),
-                                    tint = Color.White
+                                    tint = BossThemeColors.TextPrimary
                                 )
-                                Text("Delete", color = Color.White)
+                                Text("Delete", color = BossThemeColors.TextPrimary)
                             }
                         }
                     }
