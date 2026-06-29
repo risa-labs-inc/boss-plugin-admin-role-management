@@ -143,7 +143,7 @@ fun RoleDropdown(
                 .fillMaxWidth()
                 .clickable { expanded = true },
             shape = RoundedCornerShape(4.dp),
-            color = BossThemeColors.SurfaceColor
+            color = BossThemeColors.BackgroundColor
         ) {
             Row(
                 modifier = Modifier.padding(12.dp),

@@ -38,7 +38,7 @@ fun AdminRoleManagementContent(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(BossThemeColors.SurfaceColor)
+            .background(BossThemeColors.BackgroundColor)
             .padding(16.dp)
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
