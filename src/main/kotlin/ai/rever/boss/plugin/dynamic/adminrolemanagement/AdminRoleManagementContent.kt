@@ -4,6 +4,7 @@ package ai.rever.boss.plugin.dynamic.adminrolemanagement
 import ai.rever.boss.plugin.scrollbar.getPanelScrollbarConfig
 import ai.rever.boss.plugin.scrollbar.lazyListScrollbar
 import ai.rever.boss.plugin.ui.BossSearchBar
+import ai.rever.boss.plugin.ui.BossThemeColors
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.layout.*
@@ -21,7 +22,6 @@ import androidx.compose.material.icons.filled.Security
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -38,7 +38,7 @@ fun AdminRoleManagementContent(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF2B2D30))
+            .background(BossThemeColors.BackgroundColor)
             .padding(16.dp)
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
@@ -50,7 +50,7 @@ fun AdminRoleManagementContent(
             ) {
                 Text(
                     "User Role Management",
-                    color = Color.White,
+                    color = BossThemeColors.TextPrimary,
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold
                 )
@@ -62,7 +62,7 @@ fun AdminRoleManagementContent(
                     Icon(
                         Icons.Default.Refresh,
                         contentDescription = "Refresh",
-                        tint = Color.White
+                        tint = BossThemeColors.TextPrimary
                     )
                 }
             }
@@ -78,7 +78,7 @@ fun AdminRoleManagementContent(
             // User count
             Text(
                 "${state.filteredUsers.size} users",
-                color = Color.Gray,
+                color = BossThemeColors.TextSecondary,
                 fontSize = 12.sp,
                 modifier = Modifier.padding(bottom = 8.dp)
             )
@@ -169,9 +169,9 @@ fun AdminRoleManagementContent(
             }
             Snackbar(
                 modifier = Modifier.align(Alignment.BottomCenter).padding(16.dp),
-                backgroundColor = Color(0xFF4CAF50)
+                backgroundColor = BossThemeColors.SuccessColor
             ) {
-                Text(message, color = Color.White)
+                Text(message, color = BossThemeColors.TextPrimary)
             }
         }
     }
@@ -231,7 +231,7 @@ fun UserList(
                 ) {
                     Text(
                         "No more users to load",
-                        color = Color.Gray,
+                        color = BossThemeColors.TextSecondary,
                         fontSize = 12.sp
                     )
                 }
@@ -257,12 +257,12 @@ fun LoadingMoreIndicator(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 CircularProgressIndicator(
-                    color = Color(0xFF4A90E2),
+                    color = BossThemeColors.AccentColor,
                     modifier = Modifier.size(20.dp)
                 )
                 Text(
                     "Loading more users...",
-                    color = Color.Gray,
+                    color = BossThemeColors.TextSecondary,
                     fontSize = 12.sp
                 )
             }
@@ -271,7 +271,7 @@ fun LoadingMoreIndicator(
                 onLoadMore()
             }
             CircularProgressIndicator(
-                color = Color(0xFF4A90E2),
+                color = BossThemeColors.AccentColor,
                 modifier = Modifier.size(20.dp)
             )
         }
@@ -293,14 +293,14 @@ fun UserCard(
 
     Card(
         modifier = modifier,
-        backgroundColor = Color(0xFF3C3F41),
+        backgroundColor = BossThemeColors.SurfaceColor,
         elevation = 2.dp,
         shape = RoundedCornerShape(8.dp)
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
             Text(
                 user.email,
-                color = Color.White,
+                color = BossThemeColors.TextPrimary,
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Medium
             )
@@ -314,7 +314,7 @@ fun UserCard(
                 if (user.roles.isEmpty()) {
                     Text(
                         "No roles assigned",
-                        color = Color.Gray,
+                        color = BossThemeColors.TextSecondary,
                         fontSize = 12.sp,
                         fontStyle = FontStyle.Italic
                     )
@@ -337,18 +337,18 @@ fun UserCard(
                 Button(
                     onClick = onAssignRole,
                     colors = ButtonDefaults.buttonColors(
-                        backgroundColor = Color(0xFF4A90E2)
+                        backgroundColor = BossThemeColors.AccentColor
                     ),
                     modifier = Modifier.height(32.dp)
                 ) {
                     Icon(
                         Icons.Default.Add,
                         contentDescription = "Assign Role",
-                        tint = Color.White,
+                        tint = BossThemeColors.TextPrimary,
                         modifier = Modifier.size(16.dp)
                     )
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("Assign Role", color = Color.White, fontSize = 12.sp)
+                    Text("Assign Role", color = BossThemeColors.TextPrimary, fontSize = 12.sp)
                 }
 
                 // Delete is admin-only (delete_user RPC enforces is_user_admin);
@@ -357,18 +357,18 @@ fun UserCard(
                     Button(
                         onClick = onDeleteUser,
                         colors = ButtonDefaults.buttonColors(
-                            backgroundColor = Color(0xFFE91E63)
+                            backgroundColor = BossThemeColors.ErrorColor
                         ),
                         modifier = Modifier.height(32.dp)
                     ) {
                         Icon(
                             Icons.Default.Delete,
                             contentDescription = "Delete User",
-                            tint = Color.White,
+                            tint = BossThemeColors.TextPrimary,
                             modifier = Modifier.size(16.dp)
                         )
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("Delete", color = Color.White, fontSize = 12.sp)
+                        Text("Delete", color = BossThemeColors.TextPrimary, fontSize = 12.sp)
                     }
                 }
             }
@@ -385,7 +385,7 @@ fun RoleBadge(
     onRemove: () -> Unit
 ) {
     val isOwnAccount = currentUserId == userId
-    val badgeColor = Color(0xFF4A90E2)
+    val badgeColor = BossThemeColors.AccentColor
 
     val isRemovable = when {
         roleName == "user" -> false
@@ -442,7 +442,7 @@ fun LoadingView() {
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
     ) {
-        CircularProgressIndicator(color = Color(0xFF4A90E2))
+        CircularProgressIndicator(color = BossThemeColors.AccentColor)
     }
 }
 
@@ -455,14 +455,14 @@ fun ErrorView(message: String, onRetry: () -> Unit) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
                 "Error",
-                color = Color(0xFFE91E63),
+                color = BossThemeColors.ErrorColor,
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
                 message,
-                color = Color.Gray,
+                color = BossThemeColors.TextSecondary,
                 fontSize = 12.sp
             )
             Spacer(modifier = Modifier.height(16.dp))
@@ -481,7 +481,7 @@ fun EmptyView(searchQuery: String) {
     ) {
         Text(
             if (searchQuery.isBlank()) "No users found" else "No users match \"$searchQuery\"",
-            color = Color.Gray,
+            color = BossThemeColors.TextSecondary,
             fontSize = 14.sp
         )
     }
