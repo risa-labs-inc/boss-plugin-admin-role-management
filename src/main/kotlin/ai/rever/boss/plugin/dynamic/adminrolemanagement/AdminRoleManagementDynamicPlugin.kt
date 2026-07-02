@@ -36,5 +36,10 @@ class AdminRoleManagementDynamicPlugin : DynamicPlugin {
                 authDataProvider = authDataProvider
             )
         }
+
+        // Contribute users_list/roles_list/user_role_assign/remove MCP tools; auto-removed on disable/unload.
+        context.registerMcpToolProvider(
+            AdminRoleManagementMcpToolProvider(pluginId, context.userManagementProvider)
+        )
     }
 }
