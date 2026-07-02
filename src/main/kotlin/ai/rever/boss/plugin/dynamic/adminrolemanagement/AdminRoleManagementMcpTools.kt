@@ -84,10 +84,12 @@ internal class AdminRoleManagementMcpToolProvider(
         ),
     ).onEach { it.requiredPermissions = permissionsFor(it.name) }
 
-    // RBAC gate (admins bypass): reads need read perms; assigning/removing roles needs role.assign.
+    // RBAC gate (admins bypass), aligned with the server: the all-users RLS and
+    // this plugin's manifest both gate on role.read, so user listing uses that
+    // (users.read exists but isn't what the server checks here); role
+    // assign/remove match the server's role.assign exactly.
     private fun permissionsFor(tool: String): List<String> = when (tool) {
-        "users_list", "user_search" -> listOf("users.read")
-        "roles_list" -> listOf("role.read")
+        "users_list", "user_search", "roles_list" -> listOf("role.read")
         "user_role_assign", "user_role_remove" -> listOf("role.assign")
         else -> emptyList()
     }
