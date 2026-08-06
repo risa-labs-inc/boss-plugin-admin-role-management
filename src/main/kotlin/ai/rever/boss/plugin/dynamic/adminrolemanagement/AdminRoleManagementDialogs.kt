@@ -1,6 +1,7 @@
 package ai.rever.boss.plugin.dynamic.adminrolemanagement
 
 // Uses local UserWithRoles data class from AdminRoleManagementViewModel
+import ai.rever.boss.plugin.ui.BossDialog
 import ai.rever.boss.plugin.ui.BossThemeColors
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -21,7 +22,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
 
 @Composable
 fun AssignRoleDialog(
@@ -33,7 +33,7 @@ fun AssignRoleDialog(
     onDismiss: () -> Unit,
     isLoading: Boolean
 ) {
-    Dialog(onDismissRequest = { if (!isLoading) onDismiss() }) {
+    BossDialog(onDismissRequest = { if (!isLoading) onDismiss() }) {
         Surface(
             shape = RoundedCornerShape(8.dp),
             color = BossThemeColors.SurfaceColor,
@@ -191,7 +191,7 @@ fun RemoveRoleConfirmationDialog(
     onDismiss: () -> Unit,
     isLoading: Boolean
 ) {
-    Dialog(onDismissRequest = { if (!isLoading) onDismiss() }) {
+    BossDialog(onDismissRequest = { if (!isLoading) onDismiss() }) {
         Surface(
             shape = RoundedCornerShape(8.dp),
             color = BossThemeColors.SurfaceColor,
@@ -275,7 +275,7 @@ fun DeleteUserConfirmationDialog(
     onDismiss: () -> Unit,
     isLoading: Boolean
 ) {
-    Dialog(onDismissRequest = { if (!isLoading) onDismiss() }) {
+    BossDialog(onDismissRequest = { if (!isLoading) onDismiss() }) {
         Surface(
             shape = RoundedCornerShape(16.dp),
             color = BossThemeColors.SurfaceColor
